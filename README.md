@@ -59,3 +59,5 @@ RE:minalは、
 * 小さな脱線
 * 予想外の行動
 * ティーパーティー構造
+# RE-minal-public
+Ambient intelligence / fragment memory / quiet coexistence
