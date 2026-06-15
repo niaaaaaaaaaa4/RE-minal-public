@@ -1,20 +1,20 @@
-import asyncio
-import edge_tts
-import os
+from voice import speak
 
-TEXT = "……起動確認した。テスト用の音声を発話してみる。"
-VOICE = "ja-JP-NanamiNeural"
+text = """
+........おや。
 
-OUTPUT_DIR = "runtime/output"
-OUTPUT = os.path.abspath(f"{OUTPUT_DIR}/voice_test.mp3")
+まだ灯りは残っているようだ。
+外は静かだけれど、｜完全に朝になったわけでもないらしい。
 
-async def main():
+きょうは、少しだけ空気が重いね。
+けれど、｜無理に急がなくてもいいと思う。
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+作業を進めるなら、｜先ずはひとつだけ。
+fragmentを残すだけでも、充分意味がある。
 
-    communicate = edge_tts.Communicate(TEXT, VOICE)
-    await communicate.save(OUTPUT)
+........そうだね。
 
-    os.startfile(OUTPUT)
+未だ眠気が残っているなら、｜温かいものを飲んでからでも遅くない。
+"""
 
-asyncio.run(main())
+speak(text)
