@@ -1,17 +1,10 @@
-import random
-
-
-def listen_not_understood_message() -> str:
-    return random.choice([
-        "........うん。\n\n今の声は、まだ言葉として拾えなかったようだ。",
-        "........\n\n今の音は、まだ言葉として結べなかった。",
-        "........そうか。\n\nもう一度、少し近くで話してもらえるだろうか。",
-    ])
+def voice_not_captured_message() -> str:
+    return "........\n\nうまく聞き取れなかったようだ。"
 
 
 def exit_message() -> str:
-    return random.choice([
-        "また後で。",
-        "........また、続きを見よう。",
-        "........今日は、ここで閉じておこう。",
-    ])
+    return "また後で。"
+
+
+def recent_recall_voice_message() -> str:
+    return "........少し、先刻の続きを思い出したよ...。"

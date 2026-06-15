@@ -25,6 +25,7 @@ from thought_extract import (
     detect_fragment,
     detect_reminal_dev
 )
+from fragment_type import detect_fragment_type
 from idea_memory import save_idea
 from dev_memory import save_reminal_dev
 
@@ -47,28 +48,25 @@ from postprocess import apply_seia_modulation
 
 from memory import (
     save_fragment,
+    save_typed_fragment,
     load_recent_fragments,
 )
 
 from messages.task_messages import (
     task_saved_message,
-    voice_task_saved_message,
     task_list_message,
     no_task_message,
     task_done_message,
-    task_done_missing_keyword_message,
+    task_done_keyword_missing_message,
     task_not_found_message,
 )
-from messages.fragment_messages import (
-    fragment_saved_message,
-    fragment_extracted_message,
-)
+from messages.fragment_messages import fragment_saved_message
 from messages.idea_messages import idea_saved_message
 from messages.dev_messages import reminal_dev_saved_message
-from messages.recall_messages import startup_recall_voice_message
 from messages.system_messages import (
-    listen_not_understood_message,
+    voice_not_captured_message,
     exit_message,
+    recent_recall_voice_message,
 )
 
 # =========================================
@@ -355,7 +353,7 @@ if recall_text:
     print(recall_text)
     print()
 
-    recall_voice = startup_recall_voice_message()
+    recall_voice = recent_recall_voice_message()
 
     print("RE:minal >")
     print(recall_voice)
@@ -410,7 +408,8 @@ while True:
     # -------------------------------------
 
     if user_input.lower() in ["exit", "quit"]:
-        print("RE:minal > " + exit_message())
+        print("RE:minal >")
+        print(exit_message())
         break
 
     # -------------------------------------
@@ -438,7 +437,7 @@ while True:
 
         if not user_input.strip():
 
-            ai_text = listen_not_understood_message()
+            ai_text = voice_not_captured_message()
             print_reply(ai_text)
 
             speak(
@@ -499,7 +498,7 @@ while True:
 
         if not keyword:
 
-            ai_text = task_done_missing_keyword_message()
+            ai_text = task_done_keyword_missing_message()
 
         else:
 
@@ -566,7 +565,7 @@ while True:
 
         if command.kind == "fragment":
 
-            ai_text = fragment_saved_message()
+            ai_text = fragment_saved_message("unresolved")
 
             save_fragment(
                 command.text,
@@ -593,18 +592,27 @@ while True:
 
         if detected_fragment:
 
-            ai_text = fragment_extracted_message()
+            fragment_type = detect_fragment_type(detected_fragment)
+            ai_text = fragment_saved_message(fragment_type)
 
             print()
             print("[fragment extracted]")
+            print(f"type: {fragment_type}")
             print(detected_fragment)
             print()
+
+            save_typed_fragment(
+                detected_fragment,
+                ai_text,
+                fragment_type=fragment_type,
+            )
 
             complete_short_response(
                 conversation_history,
                 user_input,
                 ai_text,
                 voice_mode="fragment",
+                save_as_fragment=False,
             )
 
             continue
@@ -666,7 +674,7 @@ while True:
                 Task(text=detected_task)
             )
 
-            ai_text = voice_task_saved_message()
+            ai_text = task_saved_message()
 
             print()
             print("[task extracted]")

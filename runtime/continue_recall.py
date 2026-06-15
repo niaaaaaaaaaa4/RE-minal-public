@@ -1,8 +1,9 @@
 from task_recall import load_recent_tasks
+
 from messages.recall_messages import (
-    continue_empty_message,
     continue_task_message,
-    morning_continue_message,
+    continue_empty_message,
+    morning_task_message,
 )
 
 
@@ -13,7 +14,9 @@ def build_continue_text():
     if not tasks:
         return continue_empty_message()
 
-    return continue_task_message(tasks[0])
+    return continue_task_message(
+        tasks[0]
+    )
 
 
 def build_morning_continue():
@@ -23,4 +26,6 @@ def build_morning_continue():
     if not tasks:
         return ""
 
-    return morning_continue_message(tasks[0])
+    return morning_task_message(
+        tasks[0]
+    )
