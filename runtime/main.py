@@ -8,6 +8,9 @@ import time
 
 from pathlib import Path
 from datetime import datetime
+
+from openai import OpenAI
+
 from voice import speak
 from state import build_runtime_state
 from observation import build_observation
@@ -17,30 +20,60 @@ from command import parse_command
 from tasks import Task, TaskStore
 from listen import listen
 from task_extract import detect_task_text
+from thought_extract import (
+    detect_idea,
+    detect_fragment,
+    detect_reminal_dev
+)
+from idea_memory import save_idea
+from dev_memory import save_reminal_dev
+
+from task_recall import load_recent_tasks
+from continue_recall import (
+    build_continue_text,
+    build_morning_continue,
+)
+from task_complete import complete_task
+from today_recall import build_today_text
 
 from session import (
     save_conversation_history,
-    load_conversation_history
+    load_conversation_history,
 )
+
+from recall import build_recall_text
 
 from postprocess import apply_seia_modulation
 
 from memory import (
     save_fragment,
-    load_recent_fragments
+    load_recent_fragments,
 )
 
-from openai import OpenAI
+from messages.task_messages import (
+    task_saved_message,
+    voice_task_saved_message,
+    task_list_message,
+    no_task_message,
+    task_done_message,
+    task_done_missing_keyword_message,
+    task_not_found_message,
+)
+from messages.fragment_messages import (
+    fragment_saved_message,
+    fragment_extracted_message,
+)
+from messages.idea_messages import idea_saved_message
+from messages.dev_messages import reminal_dev_saved_message
+from messages.recall_messages import startup_recall_voice_message
+from messages.system_messages import (
+    listen_not_understood_message,
+    exit_message,
+)
 
 # =========================================
-# OpenAI API Key　
+# OpenAI API Key
 # =========================================
-
-# Windows:
-# setx OPENAI_API_KEY "sk-xxxxx"
-#
-# Mac/Linux:
-# export OPENAI_API_KEY="sk-xxxxx"
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
@@ -63,7 +96,7 @@ PERSONA_DIRS = [
 LOG_DIR = BASE_DIR / "runtime" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-TASK_STORE = TaskStore(BASE_DIR / "memory")
+TASK_STORE = TaskStore()
 
 # =========================================
 # Load Markdown Files
@@ -111,11 +144,8 @@ def load_markdown_files():
 def save_log(user_text, ai_text):
 
     now = datetime.now()
-
     filename = now.strftime("%Y-%m-%d.txt")
-
     log_path = LOG_DIR / filename
-
     timestamp = now.strftime("%H:%M:%S")
 
     log_text = f"""
@@ -135,6 +165,69 @@ RE:minal:
         f.write(log_text)
 
 # =========================================
+# Conversation Helpers
+# =========================================
+
+def record_conversation(
+    conversation_history,
+    user_text: str,
+    ai_text: str,
+):
+
+    conversation_history.append(
+        {
+            "role": "user",
+            "content": user_text,
+        }
+    )
+
+    conversation_history.append(
+        {
+            "role": "assistant",
+            "content": ai_text,
+        }
+    )
+
+    save_conversation_history(
+        conversation_history
+    )
+
+
+def print_reply(ai_text: str):
+
+    print()
+    print("RE:minal >")
+    print(ai_text)
+    print()
+
+
+def complete_short_response(
+    conversation_history,
+    user_text: str,
+    ai_text: str,
+    voice_mode: str,
+    save_as_fragment: bool = True,
+):
+
+    record_conversation(
+        conversation_history,
+        user_text,
+        ai_text,
+    )
+
+    print_reply(ai_text)
+
+    speak(
+        ai_text,
+        voice_mode=voice_mode,
+    )
+
+    save_log(user_text, ai_text)
+
+    if save_as_fragment:
+        save_fragment(user_text, ai_text)
+
+# =========================================
 # Build System Prompt
 # =========================================
 
@@ -144,9 +237,11 @@ persona_text = load_markdown_files()
 recent_memory = load_recent_fragments()
 runtime_state = build_runtime_state()
 
+
 def build_system_prompt(
     long_idle=False,
-    observation_text=""
+    observation_text="",
+    recall_text="",
 ):
 
     runtime_state = build_runtime_state()
@@ -213,16 +308,21 @@ Here are the loaded files:
 
 {observation_text}
 
+# Recall memory
+
+{recall_text}
+
 Long idle:
 {long_idle}
 """
+
 
 print("Persona loaded.")
 print(runtime_state)
 print()
 
 # =========================================
-# Conversation Loop
+# Startup
 # =========================================
 
 print("=================================")
@@ -231,34 +331,64 @@ print("=================================")
 print()
 
 startup_line = get_startup_line()
+morning_text = build_morning_continue()
+recall_text = build_recall_text()
 
 print("RE:minal >")
 print(startup_line)
 print()
 
-speak(startup_line, voice_mode="startup")
+speak(
+    startup_line,
+    voice_mode="startup",
+)
+
+if morning_text:
+
+    print("[morning recall]")
+    print(morning_text)
+    print()
+
+if recall_text:
+
+    print("[recent recall]")
+    print(recall_text)
+    print()
+
+    recall_voice = startup_recall_voice_message()
+
+    print("RE:minal >")
+    print(recall_voice)
+    print()
+
+    speak(
+        recall_voice,
+        voice_mode="ambient",
+    )
 
 last_input_time = time.time()
 
-conversation_history = (
-    load_conversation_history()
-)
+conversation_history = load_conversation_history()
+
+# =========================================
+# Conversation Loop
+# =========================================
 
 while True:
 
     user_input = input("You > ")
+    input_source = "text"
 
     current_time = time.time()
-
-    idle_seconds = (
-        current_time - last_input_time
-    )
-
+    idle_seconds = current_time - last_input_time
     long_idle = idle_seconds > 60
-
     last_input_time = current_time
 
     print(f"[idle: {idle_seconds:.1f}s]")
+
+    # -------------------------------------
+    # Ambient empty input
+    # -------------------------------------
 
     if user_input.strip() == "":
 
@@ -266,18 +396,26 @@ while True:
 
         ambient_text = get_ambient_line()
 
-        print()
-        print("RE:minal >")
-        print(ambient_text)
-        print()
+        print_reply(ambient_text)
 
-        speak(ambient_text, voice_mode="ambient")
+        speak(
+            ambient_text,
+            voice_mode="ambient",
+        )
 
         continue
 
+    # -------------------------------------
+    # Exit
+    # -------------------------------------
+
     if user_input.lower() in ["exit", "quit"]:
-        print("RE:minal > また後で。")
+        print("RE:minal > " + exit_message())
         break
+
+    # -------------------------------------
+    # /commands
+    # -------------------------------------
 
     if user_input.startswith("/listen"):
 
@@ -291,6 +429,7 @@ while True:
                 seconds = 5
 
         user_input = listen(seconds=seconds)
+        input_source = "voice"
 
         print()
         print("You (voice) >")
@@ -298,20 +437,111 @@ while True:
         print()
 
         if not user_input.strip():
-            print("RE:minal > ........うん。\n\n今の声は、まだ言葉として拾えなかった。")
-            continue
 
-        detected_task = detect_task_text(user_input)
+            ai_text = listen_not_understood_message()
+            print_reply(ai_text)
 
-        if detected_task:
-            TASK_STORE.save(
-                Task(text=detected_task)
+            speak(
+                ai_text,
+                voice_mode="ambient",
             )
 
-            print()
-            print("[task extracted]")
-            print(detected_task)
-            print()
+            continue
+
+    if user_input.strip() == "/tasks":
+
+        tasks = load_recent_tasks()
+
+        print()
+
+        if not tasks:
+            ai_text = no_task_message()
+
+        else:
+            ai_text = task_list_message(tasks)
+
+        print("RE:minal >")
+        print(ai_text)
+        print()
+
+        speak(
+            ai_text,
+            voice_mode="fragment"
+        )
+
+        continue
+
+    if user_input.strip() == "/continue":
+
+        ai_text = build_continue_text()
+
+        print()
+        print("RE:minal >")
+        print(ai_text)
+        print()
+
+        speak(
+            ai_text,
+            voice_mode="ambient"
+        )
+
+        continue
+
+    if user_input.startswith("/done"):
+
+        keyword = (
+            user_input
+            .replace("/done", "")
+            .strip()
+        )
+
+        print()
+
+        if not keyword:
+
+            ai_text = task_done_missing_keyword_message()
+
+        else:
+
+            result = complete_task(keyword)
+
+            if result:
+                ai_text = task_done_message(result)
+
+            else:
+
+                ai_text = task_not_found_message()
+
+        print("RE:minal >")
+        print(ai_text)
+        print()
+
+        speak(
+            ai_text,
+            voice_mode="fragment"
+        )
+
+        continue
+
+    if user_input.strip() == "/today":
+
+        ai_text = build_today_text()
+
+        print()
+        print("RE:minal >")
+        print(ai_text)
+        print()
+
+        speak(
+            ai_text,
+            voice_mode="ambient"
+        )
+
+        continue
+
+    # -------------------------------------
+    # Explicit slash commands
+    # -------------------------------------
 
     command = parse_command(user_input)
 
@@ -323,90 +553,156 @@ while True:
                 Task(text=command.text)
             )
 
-            ai_text = "........そうか。\n\nひとつ、task として残しておいた。"
+            ai_text = task_saved_message()
 
-            conversation_history.append(
-                {
-                    "role": "user",
-                    "content": user_input
-                }
+            complete_short_response(
+                conversation_history,
+                user_input,
+                ai_text,
+                voice_mode="task",
             )
-
-            conversation_history.append(
-                {
-                    "role": "assistant",
-                    "content": ai_text
-                }
-            )
-
-            save_conversation_history(
-                conversation_history
-            )
-
-            print()
-            print("RE:minal >")
-            print(ai_text)
-            print()
-
-            # 短い返答だけ、声で返す
-            if len(ai_text) <= 300:
-                speak(ai_text, voice_mode="normal")
-
-            save_log(user_input, ai_text)
-            save_fragment(user_input, ai_text)
 
             continue
 
         if command.kind == "fragment":
 
-            ai_text = "........うん。\n\nその断片は、fragment として残しておいた。"
+            ai_text = fragment_saved_message()
 
-            save_fragment(command.text, ai_text)
-
-            conversation_history.append(
-                {
-                    "role": "user",
-                    "content": user_input
-                }
+            save_fragment(
+                command.text,
+                ai_text,
             )
 
-            conversation_history.append(
-                {
-                    "role": "assistant",
-                    "content": ai_text
-                }
+            complete_short_response(
+                conversation_history,
+                user_input,
+                ai_text,
+                voice_mode="fragment",
+                save_as_fragment=False,
             )
 
-            save_conversation_history(
-                conversation_history
-            )
+            continue
+
+    # -------------------------------------
+    # Voice-derived lightweight extraction
+    # -------------------------------------
+
+    if input_source == "voice":
+
+        detected_fragment = detect_fragment(user_input)
+
+        if detected_fragment:
+
+            ai_text = fragment_extracted_message()
 
             print()
+            print("[fragment extracted]")
+            print(detected_fragment)
+            print()
+
+            complete_short_response(
+                conversation_history,
+                user_input,
+                ai_text,
+                voice_mode="fragment",
+            )
+
+            continue
+
+        detected_dev = detect_reminal_dev(user_input)
+
+        if detected_dev:
+
+            save_reminal_dev(detected_dev)
+
+            ai_text = reminal_dev_saved_message()
+
+            print()
+            print("[reminal dev extracted]")
+            print(detected_dev)
+            print()
+
             print("RE:minal >")
             print(ai_text)
             print()
 
-            speak(ai_text, voice_mode="task")
-            save_log(user_input, ai_text)
+            speak(ai_text, voice_mode="fragment")
 
             continue
+
+        detected_idea = detect_idea(user_input)
+
+        if detected_idea:
+
+            save_idea(detected_idea)
+
+            ai_text = idea_saved_message()
+
+            print()
+            print("[idea extracted]")
+            print(detected_idea)
+            print()
+
+            save_fragment(
+                f"[idea] {detected_idea}",
+                ai_text,
+            )
+
+            complete_short_response(
+                conversation_history,
+                user_input,
+                ai_text,
+                voice_mode="fragment",
+                save_as_fragment=False,
+            )
+
+            continue
+
+        detected_task = detect_task_text(user_input)
+
+        if detected_task:
+
+            TASK_STORE.save(
+                Task(text=detected_task)
+            )
+
+            ai_text = voice_task_saved_message()
+
+            print()
+            print("[task extracted]")
+            print(detected_task)
+            print()
+
+            complete_short_response(
+                conversation_history,
+                user_input,
+                ai_text,
+                voice_mode="task",
+            )
+
+            continue
+
+    # -------------------------------------
+    # Normal ChatGPT response
+    # -------------------------------------
 
     try:
 
         observation_text = build_observation(
             user_input,
-            long_idle=long_idle
+            long_idle=long_idle,
         )
 
         system_prompt = build_system_prompt(
             long_idle=long_idle,
-            observation_text=observation_text
+            observation_text=observation_text,
+            recall_text=recall_text,
         )
 
         input_messages = [
             {
                 "role": "system",
-                "content": system_prompt
+                "content": system_prompt,
             }
         ]
 
@@ -417,48 +713,35 @@ while True:
         input_messages.append(
             {
                 "role": "user",
-                "content": user_input
+                "content": user_input,
             }
         )
 
         response = client.responses.create(
             model="gpt-5.5",
-            input=input_messages
+            input=input_messages,
         )
 
         ai_text = response.output_text
         ai_text = apply_seia_modulation(ai_text)
 
         opening = get_opening()
-
         ai_text = f"{opening}\n\n{ai_text}"
-        
-        conversation_history.append(
-            {
-                "role": "user",
-                "content": user_input
-            }
-        )
 
-        conversation_history.append(
-            {
-                "role": "assistant",
-                "content": ai_text
-            }
-        )
-
-        save_conversation_history(
-            conversation_history
+        record_conversation(
+            conversation_history,
+            user_input,
+            ai_text,
         )
 
         print(f"[history: {len(conversation_history)} messages]")
 
-        print()
-        print("RE:minal >")
-        print(ai_text)
-        print()
+        print_reply(ai_text)
 
-        speak(ai_text, voice_mode="fragment")
+        speak(
+            ai_text,
+            voice_mode="normal",
+        )
 
         save_log(user_input, ai_text)
         save_fragment(user_input, ai_text)
@@ -469,4 +752,3 @@ while True:
         print("[ERROR]")
         print(e)
         print()
-

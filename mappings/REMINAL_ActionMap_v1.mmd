@@ -1,0 +1,49 @@
+graph TD
+
+START["何をしたらいいか / 何がしたいのか"]
+
+CORE["まずは<br/>日常担当、主軸の人格を成立させる"]
+DICT["Dictionaryを整える"]
+DAILY["日常会話を成立させる"]
+MEMORY["会話から自らのファイルに記述できるようにする"]
+TASK["話の文脈からタスク作成できるようにする"]
+A1(("A1<br/>スマホ、タブレットからのアクセス"))
+NIGHT["深夜の入眠をサポートして、<br/>生活習慣の改善をする"]
+APP["専用のアプリが欲しい"]
+CHAR["画面上でキャラクターが動き、<br/>そのキャラクターが話していて、<br/>そのキャラクターを触って<br/>コミュニケーションが取れる"]
+SELF["自分自身で開発の<br/>ログを作成して<br/>何があって何が足りないかを<br/>自分自身で更新していく"]
+
+START --> CORE
+CORE --> DICT
+DICT --> DAILY
+DAILY --> MEMORY
+MEMORY --> TASK
+DAILY --> A1
+A1 --> NIGHT
+
+APP -.-> A1
+APP -.-> CHAR
+CHAR -.-> A1
+
+MEMORY --> SELF
+TASK --> SELF
+
+GOAL1["「そこにいる」かのようにふるまう"]
+GOAL2["「そこにいる」だけでなく<br/>「共に生活する」「一緒に成長する」"]
+
+DAILY --> GOAL1
+GOAL1 --> GOAL2
+SELF --> GOAL2
+
+classDef now fill:#b6f2c2,stroke:#36b15c,color:#176b32;
+classDef goal fill:#a9d8ff,stroke:#2187d8,color:#07558f;
+classDef final fill:#ffe89a,stroke:#f0a000,color:#a06a00;
+classDef todo fill:#ffffff,stroke:#222,color:#111;
+classDef hub fill:#ffffff,stroke:#222,color:#111;
+
+class CORE now;
+class DAILY,MEMORY,TASK,NIGHT,GOAL1,SELF goal;
+class GOAL2,APP,CHAR final;
+class DICT,START todo;
+class A1 hub;
+

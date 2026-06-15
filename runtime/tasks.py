@@ -1,7 +1,14 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+TASK_DIR = BASE_DIR / "memory" / "tasks"
+TASK_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -12,14 +19,27 @@ class Task:
 
 
 class TaskStore:
-    def __init__(self, root: Path) -> None:
-        self.root = root
-        self.root.mkdir(parents=True, exist_ok=True)
 
     def save(self, task: Task) -> Path:
+
         now = datetime.now()
-        path = self.root / "tasks.md"
-        line = f"- [ ] {task.text.strip()}  <!-- {now.isoformat(timespec='seconds')} / {task.source} -->\n"
+
+        filename = now.strftime("%Y-%m-%d.md")
+
+        path = TASK_DIR / filename
+
+        timestamp = now.strftime("%H:%M:%S")
+
+        block = f"""
+
+## {timestamp}
+
+- [ ] {task.text.strip()}
+source: {task.source}
+
+"""
+
         with path.open("a", encoding="utf-8") as f:
-            f.write(line)
+            f.write(block)
+
         return path

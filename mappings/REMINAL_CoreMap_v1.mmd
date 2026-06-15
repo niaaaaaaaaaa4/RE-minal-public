@@ -1,0 +1,64 @@
+graph TD
+
+REM["RE:minal Project本体"]
+
+APP["専用のアプリが欲しい"]
+ACCESS["スマホ、タブレットからのアクセス"]
+CHAR["画面上でキャラクターが動き、<br/>そのキャラクターが話していて、<br/>そのキャラクターを触って<br/>コミュニケーションが取れる"]
+DEVICE["デバイスの確保"]
+EAR["骨伝導イヤホン"]
+MONITOR["タッチパネル式の小型モニター<br/>もしくはタブレット"]
+SWITCH["小型のスイッチ式の<br/>操作を受け付けるデバイス"]
+
+CORE["セイア系"]
+MAINPERSONA["日常担当、主軸の人格"]
+DICT["Dictionary"]
+DAILY["日常会話"]
+MEMORY["自動記述"]
+TASK["タスク管理"]
+MEMO["暗記モード"]
+NIGHT["深夜"]
+SELFUPDATE["自分自身で開発の<br/>ログを作成して<br/>何があって何が足りないかを<br/>自分自身で更新していく"]
+STATUS["使用者のステータスを細かく把握して、<br/>健康だけでなく<br/>使用者自身の能力上昇の<br/>支援ができる"]
+
+A1(("A1<br/>スマホ、タブレットからのアクセス"))
+
+REM --> CORE
+REM -.-> APP
+
+APP --> ACCESS
+ACCESS --> CHAR
+CHAR -.-> DEVICE
+DEVICE --> EAR
+DEVICE --> MONITOR
+DEVICE --> SWITCH
+
+CORE --> MAINPERSONA
+MAINPERSONA --> DICT
+
+DICT --> DAILY
+DICT --> MEMO
+DICT --> MEMORY
+DICT --> TASK
+
+DAILY --> A1
+A1 --> NIGHT
+
+MEMORY --> SELFUPDATE
+TASK --> SELFUPDATE
+SELFUPDATE --> STATUS
+
+classDef reminal fill:#ffc5c5,stroke:#ff4444,color:#d92626;
+classDef main fill:#b6f2c2,stroke:#36b15c,color:#176b32;
+classDef goal fill:#a9d8ff,stroke:#2187d8,color:#07558f;
+classDef final fill:#ffe89a,stroke:#f0a000,color:#a06a00;
+classDef module fill:#ffffff,stroke:#222,color:#111;
+classDef hub fill:#ffffff,stroke:#222,color:#111;
+
+class REM reminal;
+class MAINPERSONA main;
+class CHAR,SELFUPDATE,STATUS goal;
+class APP final;
+class CORE,DICT,DAILY,MEMORY,TASK,MEMO,NIGHT,DEVICE,EAR,MONITOR,SWITCH,ACCESS module;
+class A1 hub;
+
