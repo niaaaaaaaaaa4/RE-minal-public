@@ -59,5 +59,11 @@ RE:minalは、
 * 小さな脱線
 * 予想外の行動
 * ティーパーティー構造
+
 # RE-minal-public
+
 Ambient intelligence / fragment memory / quiet coexistence
+
+# 展開
+
+現在は、音声入力・VOICEVOX返答・fragment/task/idea記録・recall機能を中心に実装中。
