@@ -67,3 +67,11 @@ Ambient intelligence / fragment memory / quiet coexistence
 # 展開
 
 現在は、音声入力・VOICEVOX返答・fragment/task/idea記録・recall機能を中心に実装中。
+
+## 次回開始地点
+
+- messages 分離後の runtime は起動確認済み
+- /tasks /today /continue /listen は動作確認済み
+- 次回は大規模な機能追加ではなく、開発しやすい環境整理から始める
+- runtime のフォルダ分割は急がず、壊れない単位で進める
+- まず messages/ の役割確認と、main.py 内の直書き文の残りを確認する

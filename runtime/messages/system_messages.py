@@ -1,10 +1,18 @@
+from messages.banks.endings import EXIT
+from messages.banks.pauses import QUIET_PAUSE
+from messages.banks.warmth import (
+    RECENT_RECALL_VOICE,
+    VOICE_NOT_CAPTURED,
+)
+
+
 def voice_not_captured_message() -> str:
-    return "........\n\nうまく聞き取れなかったようだ。"
+    return f"{QUIET_PAUSE}\n\n{VOICE_NOT_CAPTURED}"
 
 
 def exit_message() -> str:
-    return "また後で。"
+    return EXIT
 
 
 def recent_recall_voice_message() -> str:
-    return "........少し、先刻の続きを思い出したよ...。"
+    return RECENT_RECALL_VOICE

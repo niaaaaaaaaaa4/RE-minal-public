@@ -1,62 +1,51 @@
 import random
 
+from messages.banks.observations import (
+    CONTINUE_EMPTY,
+    CONTINUE_TASK_ENDINGS,
+    CONTINUE_TASK_OPENINGS,
+    MORNING_EMPTY,
+    MORNING_TASK_PATTERNS,
+    TODAY_EMPTY,
+    TODAY_LIST_INTRO,
+    TODAY_NO_FILE,
+)
+from messages.banks.pauses import QUIET_PAUSE
+
 
 def continue_task_message(task: str) -> str:
-    return random.choice([
-        (
-            "........\n\n"
-            "少し、昨日の続きを思い出していた。\n\n"
-            f"{task}\n"
-            "まだ机上に残っているみたいだね。"
-        ),
-        (
-            "........\n\n"
-            "先刻の続きを、少し見返していた。\n\n"
-            f"{task}\n"
-            "まだ灯りは残っているようだ。"
-        ),
-        (
-            "........\n\n"
-            "まだ、続きとして置かれているものがある。\n\n"
-            f"{task}\n"
-            "今日はこの辺りから始まりそうだ。"
-        ),
-    ])
+    index = random.randrange(len(CONTINUE_TASK_OPENINGS))
+
+    return (
+        f"{QUIET_PAUSE}\n\n"
+        f"{CONTINUE_TASK_OPENINGS[index]}\n\n"
+        f"{task}\n"
+        f"{CONTINUE_TASK_ENDINGS[index]}"
+    )
 
 
 def continue_empty_message() -> str:
-    return random.choice([
-        "........\n\n今は、続きとして残っているものは少ないようだ。",
-        "........\n\n今日は、静かな状態から始まりそうだね。",
-        "........\n\n今は、急いで拾う続きは少ないみたいだ。",
-    ])
+    return f"{QUIET_PAUSE}\n\n{random.choice(CONTINUE_EMPTY)}"
 
 
 def morning_task_message(task: str) -> str:
-    return random.choice([
-        (
-            "今日は、\n"
+    before, after = random.choice(MORNING_TASK_PATTERNS)
+
+    if not before:
+        return (
             f"{task}\n"
-            "あたりから始まりそうだ。"
-        ),
-        (
-            "朝の机上には、\n"
-            f"{task}\n"
-            "が、まだ残っているみたいだね。"
-        ),
-        (
-            f"{task}\n"
-            "その続きを、少し気に掛けているようだ。"
-        ),
-    ])
+            f"{after}"
+        )
+
+    return (
+        f"{before}\n"
+        f"{task}\n"
+        f"{after}"
+    )
 
 
 def morning_empty_message() -> str:
-    return random.choice([
-        "今日は、まだ急いで拾う続きを少ないようだ。",
-        "朝の机上は、少し静かなようだ。",
-        "今は、無理に続きを探さなくてもよさそうだ。",
-    ])
+    return random.choice(MORNING_EMPTY)
 
 
 # Backward-compatible aliases.
@@ -69,11 +58,11 @@ def no_continue_message() -> str:
     return continue_empty_message()
 
 def today_no_file_message() -> str:
-    return "........\n\n今日は、まだtaskが置かれていないようだ。"
+    return f"{QUIET_PAUSE}\n\n{TODAY_NO_FILE}"
 
 
 def today_empty_message() -> str:
-    return "........\n\n今日のtaskは、今はだいぶ軽いようだ。"
+    return f"{QUIET_PAUSE}\n\n{TODAY_EMPTY}"
 
 
 def today_task_list_message(tasks: list[str]) -> str:
@@ -83,7 +72,7 @@ def today_task_list_message(tasks: list[str]) -> str:
     )
 
     return (
-        "........\n\n"
-        "今日、机上に置かれているtaskを並べてみる。\n\n"
+        f"{QUIET_PAUSE}\n\n"
+        f"{TODAY_LIST_INTRO}\n\n"
         f"{joined}"
     )
